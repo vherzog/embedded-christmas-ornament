@@ -1,0 +1,49 @@
+create .pro file:
+	qmake -project
+create Makefile:
+	qmake
+modify Makefile:
+	change INCPATH to:
+	INCPATH = -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++ \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/arm-angstrom-linux-gnueabi \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/backward \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/bits \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/debug \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/ext \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include/QtCore \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include/QtGui \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include/QtNetwork \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/mkspecs/qws/linux-arm-g++ -I. -I. -I. -I.
+create binary:
+	make
+copy binary to gumstix via zmodem
+copy libraries into a sd card via zmodem:
+	sd card is in /media/card on gumstix
+	create a folder called lib
+	copy following: "fonts libQtCore.so.4 libQtGui.so.4 libQtNetwork.so.4 ld-uClibc.so.0 libc.so.0 libm.so.0 libstdc++.so.6"
+		from folder: /ad/eng/courses/ec/ec535/gumstix/oe/qt/lib
+		from folder: /ad/eng/courses/ec/ec535/arm-linux/lib
+		into /media/card/lib/
+create library links in gumstix:
+	cd /usr/lib
+	ln -s /media/card/lib/libQtCore.so.4 libQtCore.so.4
+	ln -s /media/card/lib/libQtGui.so.4 libQtGui.so.4
+	ln -s /media/card/lib/libQtNetwork.so.4 libQtNetwork.so.4
+	ln -s /media/card/lib/ld-uClibc.so.0 ld-uClibc.so.0
+	ln -s /media/card/lib/libc.so.0 libc.so.0
+	ln -s /media/card/lib/libm.so.0 libm.so.0
+	ln -s /media/card/lib/libstdc\+\+.so.6 libstdc\+\+.so.6
+export some variables in gumstix:
+	export QWS_MOUSE_PROTO='tslib:/dev/input/touchscreen0'
+	export TSLIB_CONFFILE=/etc/ts.conf
+	export TSLIB_PLUGINDIR=/usr/lib
+	export TSLIB_TSDEVICE=/dev/input/event0
+	export TSLIB_FBDEVICE=/dev/fb0
+	export TSLIB_CONSOLEDEVICE=/dev/tty
+	export QT_QWS_FONTDIR=/media/card/lib/fonts
+	export TSLIB_PLUGINDIR=/usr/lib/ts
+calibrate touchscreen:
+	ts_calibrate
+run binary:
+	./blue_screen -qws
