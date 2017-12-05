@@ -23,6 +23,7 @@
 #include <linux/errno.h> /* error codes */
 #include <linux/types.h> /* size_t */
 #include <linux/proc_fs.h>
+#include <linux/time.h>
 #include <linux/fcntl.h> /* O_ACCMODE */
 #include <linux/jiffies.h> /* jiffies */
 #include <asm/system.h> /* cli(), *_flags */
@@ -30,39 +31,40 @@
 
 /* Function Headers*/ 
 static void my_cleanup_module(void);
-static void timer_handler(unsigned long data);
+static void slowTimerHandler(unsigned long data);
 static void sonarTimerHandler(unsigned long data);
+static void sonarReadTimerHandler(unsigned long data);
+
 static ssize_t gpio_read(struct file* filp, char* buf, size_t count, loff_t* f_pos);
 static ssize_t gpio_write( struct file *filp, const char __user *buff, unsigned long len, void *data);
-static int modPWMRegs(int regNUM, int Prescale, int dutyCycle, int periodValue);
 
 /* GPIO definitions */
 #define MYGPIO 113
-#define HIGH 1
-#define LOW 0
-#define LED0 16
-#define LED1 29
-#define LED2 30
-#define LED3 31
-#define BTN0 17
-#define BTN1 101
 #define SONAR 101
+#define SONAR_READ 17
 #define GPIO_MAJOR 61
-#define SONAR_PERIOD 1
-#define TIMER_PERIOD 60000
+#define LOW 0
+#define HIGH 1
+#define SONAR_PERIOD 1 //usecs
+#define SONAR_READ_PERIOD 5000  //msecs
+#define SONAR_READ_HALT 10 // usecs
+#define TIMER_PERIOD 60000 //msecs
 
 /* Global variables */
 static int dir, en, irq17, irq101, reset, bLevel;
 static int count;
-static struct timer_list* ledTimer;
+static struct timer_list* slowTimer;
 static struct timer_list* sonarTimer; /* Simultaneous timer */
+static struct timer_list* sonarReadTimer;
+static struct timeval* prevTime;
+
 char* bufKern;
 static int timer_period;
-static int haltSonar;
 static int sonarCount;
 static int prevSonarRead;
-static unsigned long prevJiffies;
 static int slowCount;
+
+/* Interval Timer Structs */
 
 /* General FOPS */
 struct file_operations gpio_fops = {
@@ -71,41 +73,33 @@ struct file_operations gpio_fops = {
 };
 
 /* IRQ Handlers */
-irqreturn_t gpio_irq17_rising(int irq, void *dev_id, struct pt_regs *regs)
+irqreturn_t gpio_irq101_rising(int irq, void *dev_id, struct pt_regs *regs)
 {
+  
   if (pxa_gpio_get_value(SONAR)) {
-    prevJiffies = jiffies;
+    printk(KERN_ALERT "HIGH Interrupt \n");
+    /* do_gettimeofday(prevTime); */
+    printk(KERN_ALERT "Time 1 in s: %lu \t Time 1 in us: %lu \n", (long int) (prevTime->tv_sec), (long int) prevTime->tv_usec);    
+    printk(KERN_ALERT "\n\n\n");
+
   }
   else {
-    if (jiffies-prevJiffies > 10) {
-      printk(KERN_ALERT "Jiffie difference: %u\n", jiffies-prevJiffies);
-      printk(KERN_ALERT "Jiffie0: %u \t Jiffie1: %u\n", prevJiffies, jiffies);
-    }
+    struct timeval curTime;
+    do_gettimeofday(&curTime);
+    printk(KERN_ALERT "Low \n");
+    printk(KERN_ALERT "Time 1 in s: %lu \n", (long int) (prevTime->tv_sec));    
+    printk(KERN_ALERT "Time 1 in s: %lu \n", (long int) (curTime.tv_sec));    
+
+    printk(KERN_ALERT "Time 1 in us: %lu \n", (long int) (prevTime->tv_usec));
+    printk(KERN_ALERT "Time 2 in us: %lu \n", (long int) (curTime.tv_usec));
+    printk(KERN_ALERT "Difference in time  in us: %d \n", timeval_compare(&curTime, prevTime));
+    printk(KERN_ALERT "\n\n\n");
+
   }
 
-  /* unsigned long temp; */
-  /* if (pxa_gpio_get_value(SONAR)) { */
-  /*   prevJiffies = jiffies; */
-  /*   printk(KERN_INFO "Rising Edge\n"); */
-  /*   prevSonarRead = sonarCount; */
-  /* } */
-  /* else { */
-  /*   printk(KERN_INFO "Interval: %u\n",  (sonarCount - prevSonarRead)); */
-  /*   printk(KERN_INFO "Jiffies0: %u\t Jiffies1:%u\n", prevJiffies, jiffies); */
-  /* } */
   return IRQ_HANDLED;
 }
 
-
-/* Falling edge interrupt handler */
-irqreturn_t gpio_irq17_falling(int irq, void *dev_id, struct pt_regs *regs)
-{
-  if (jiffies-prevJiffies > 10) {
-    printk(KERN_ALERT "Jiffie difference: %u\n", jiffies-prevJiffies);
-    printk(KERN_ALERT "Jiffie0: %u \t Jiffie1: %u\n", prevJiffies, jiffies);
-  }
-  return IRQ_HANDLED;
-}
 
 static int my_init_module(void)
 {
@@ -123,10 +117,11 @@ static int my_init_module(void)
 
 	/* Set buttons as inputs */
 	gpio_direction_input(SONAR);
+	gpio_direction_output(SONAR_READ, LOW);
 
 	/* Intialize interrupts */
 	irq = IRQ_GPIO(SONAR);
-	if (request_irq(irq, (void*) &gpio_irq17_rising, SA_INTERRUPT | SA_TRIGGER_RISING | SA_TRIGGER_FALLING,
+	if (request_irq(irq, (void*) &gpio_irq101_rising, SA_INTERRUPT | SA_TRIGGER_RISING | SA_TRIGGER_FALLING,
 				"sonarRising", NULL) != 0 ) {
                 printk ( "irq not acquired \n" );
                 return -1;
@@ -155,26 +150,42 @@ static int my_init_module(void)
 	irq101 = 0;
 	reset = 0;
 
+	/* Declare timespec struct */
+	prevTime = (struct timeval*) kmalloc(sizeof(struct timeval), GFP_KERNEL);
+	if (!prevTime) {
+	  printk(KERN_ALERT "Unable to allocatet timespec struct\n");
+	  return -ENOMEM;
+	}
+
 	/* Initialize timers for incrementing count */
-	ledTimer = (struct timer_list*) kmalloc(sizeof(struct timer_list), GFP_KERNEL);
-	if (!ledTimer) {
+	slowTimer = (struct timer_list*) kmalloc(sizeof(struct timer_list), GFP_KERNEL);
+	if (!slowTimer) {
 	  printk(KERN_ALERT "Unable to assign timer, exiting\n");
 	  my_cleanup_module();
       return -ENOMEM;
 	}
-	setup_timer(ledTimer, timer_handler, 0);
-	mod_timer(ledTimer, jiffies + msecs_to_jiffies(TIMER_PERIOD));
+	setup_timer(slowTimer, slowTimerHandler, 0);
+	mod_timer(slowTimer, jiffies + msecs_to_jiffies(TIMER_PERIOD));
+
+	/* Sonar Read Timer, triggers read */
+	sonarReadTimer = (struct timer_list*) kmalloc(sizeof(struct timer_list), GFP_KERNEL);
+	if (!sonarReadTimer) {
+	  printk(KERN_ALERT "Unable to assign timer, exiting\n");
+	  my_cleanup_module();
+	  return -ENOMEM;
+	}
+	setup_timer(sonarReadTimer, sonarReadTimerHandler, 0);
+	mod_timer(sonarReadTimer, jiffies + msecs_to_jiffies(SONAR_READ_PERIOD));
 
 	/* Initialize timers for detecting simultaneous button presses */
 	sonarTimer = (struct timer_list*) kmalloc(sizeof(struct timer_list), GFP_KERNEL);
 	if (!sonarTimer) {
 	  printk(KERN_ALERT "Unable to assign timer, exiting\n");
 	  my_cleanup_module();
-      return -ENOMEM;
+	  return -ENOMEM;
 	}
 	/* sonarTimer->data = (unsigned long) kmalloc(sizeof(int), GFP_KERNEL); */
 	sonarTimer->data = 0;
-	haltSonar = 0;
 	sonarCount = 0;
 	prevSonarRead = 0;
 	slowCount = 0;
@@ -195,32 +206,7 @@ static int my_init_module(void)
 
 
 /***********************************************************************************
- * Modifies PWM registers, 
- * regNum refers to which PWM registers are being modified, either 0 or 1
- * 10 LSB for dutyCycle and periodValue will be taken
- * 6 LSB for preScale will be taken
- * See Xscale documentation for others
- **********************************************************************************/
-static int modPWMRegs(int regNum, int preScale, int dutyCycle, int periodValue) {
-
-  /* Save appropriate registers */
-  if (regNum == 0) {
-    PWM_CTRL0 |= 0x0000003F & preScale;
-    PWM_PWDUTY0 |= 0x000003FF & dutyCycle;
-    PWM_PERVAL0 |= 0x000003FF & periodValue;
-  }
-  else if (regNum == 1) {
-    PWM_CTRL1 |= 0x0000003F & preScale;
-    PWM_PWDUTY1 |= 0x000003FF & dutyCycle;
-    PWM_PERVAL1 |= 0x000003FF & periodValue;
-
-  }
-
-  return 1; /* Change this to something meaningfull */
-}
-
-/***********************************************************************************
- * Timer for detecting simulataneous button presses
+ * Timer for detecting how long sonar pulse is
  **********************************************************************************/
 static void sonarTimerHandler(unsigned long data) {
   if (pxa_gpio_get_value(SONAR)) 
@@ -230,30 +216,51 @@ static void sonarTimerHandler(unsigned long data) {
 
 
 /***********************************************************************************
+ * Timer for triggering sonar ouput
+ **********************************************************************************/
+static void sonarReadTimerHandler (unsigned long data) {
+  if (pxa_gpio_get_value(SONAR_READ)) {
+    pxa_gpio_set_value(SONAR_READ, LOW);
+    mod_timer(sonarReadTimer, jiffies + msecs_to_jiffies(SONAR_READ_PERIOD));
+  }
+  else {
+    pxa_gpio_set_value(SONAR_READ, HIGH);
+    mod_timer(sonarReadTimer, jiffies + usecs_to_jiffies(SONAR_READ_HALT));
+
+
+    printk(KERN_ALERT "\n HIGH timer \n");
+    do_gettimeofday(prevTime);
+    printk(KERN_ALERT "Time 1 in s: %lu \t Time 1 in us: %lu \n", (long int) (prevTime->tv_sec), (long int) prevTime->tv_usec);    
+    printk(KERN_ALERT "\n\n\n");
+
+  }
+}
+
+
+/***********************************************************************************
  * Timer Callback for count
  **********************************************************************************/
-static void timer_handler(unsigned long data) {
+static void slowTimerHandler(unsigned long data) {
   /* int l0, l1, l2, l3; */
   slowCount++;
   /* if (sonarCount > 100) { */
-    printk(KERN_ALERT "sonarCount:%d\n", sonarCount);
-    printk(KERN_ALERT "slow count:%d\n", slowCount);
+    /* printk(KERN_ALERT "sonarCount:%d\n", sonarCount); */
+    /* printk(KERN_ALERT "slow count:%d\n", slowCount); */
     slowCount = 0;
     sonarCount = 0;
   /* } */
 
 
   /* Reset timer */
-  mod_timer(ledTimer, jiffies + msecs_to_jiffies(TIMER_PERIOD));
+  mod_timer(slowTimer, jiffies + msecs_to_jiffies(TIMER_PERIOD));
 }
 
 static void my_cleanup_module(void)
 {
   unregister_chrdev(GPIO_MAJOR, "mygpio");
   free_irq(IRQ_GPIO(SONAR), NULL);
-  free_irq(IRQ_GPIO(BTN1), NULL);
 
-  if(ledTimer) kfree(ledTimer);
+  if(slowTimer) kfree(slowTimer);
   if(bufKern)  kfree(bufKern);
 }
 
@@ -263,76 +270,6 @@ static void my_cleanup_module(void)
  * Takes user input and modifies period 
  **********************************************************************************/
 static ssize_t gpio_write( struct file *filp, const char __user *buff, unsigned long len, void *data) {
-  char op;
-  char val;
-  memset(bufKern, 0, 256);
-
-  if (copy_from_user(bufKern, buff, len)) { return -EFAULT;}
-  sscanf(buff,"%c%c", &op, &val);
-  
-  /* Change timer frequency */
-  if(strlen(buff) == 3)
-  {
-      if (op == 'f') {
-          if(val >= '1' && val <= '9')
-          {
-              timer_period = 1000 * (val - '0') / 4;
-          }
-          else {
-              printk(KERN_INFO "Invalid Input\n");
-          }
-      }
-      /* Change timer value */
-      else if (op == 'v') {
-	if(val >= '0' && val <= '9')
-          {
-	    count = val - '0';
-	    pxa_set_cken(CKEN0_PWM0, count&0x1);
-	    pxa_gpio_set_value(LED1, count&0x2);
-	    pxa_gpio_set_value(LED2, count&0x4);
-	    pxa_gpio_set_value(LED3, count&0x8);
-          }
-	else if(val >= 'a' && val <= 'f')
-          {
-	    count = val - 'a' + 10;
-	    pxa_set_cken(CKEN0_PWM0, count&0x1);
-	    pxa_gpio_set_value(LED1, count&0x2);
-	    pxa_gpio_set_value(LED2, count&0x4);
-	    pxa_gpio_set_value(LED3, count&0x8);
-          }
-	else {
-	  printk(KERN_INFO "Invalid Input\n");
-	}
-      }
-      else if (op == 'b') {
-	if(val >= '1' && val <= '3') {
-	  switch (val) {
-	  case '1': 
-	    modPWMRegs(0, 63, 10, 10); /* Clock every 5us , 50% duty cycle,  */
-	    bLevel = 1;
-	    break;
-	  case '2': 
-	    modPWMRegs(0, 63, 10, 30); /* Clock every 5us , 33% duty cycle,  */
-	    bLevel = 2;
-	    break;
-	  case '3':
-	    modPWMRegs(0, 63, 10, 100); /* Clock every 5us , 10% duty cycle,  */
-	    bLevel = 3;
-	    break;
-	  }
-	}
-	else {
-	  printk(KERN_INFO "Invalid Input\n");
-	}
-      }
-
-      else { 
-        printk(KERN_INFO "Invalid Input\n");
-      }
-  }
-  else { 
-        printk(KERN_INFO "Invalid Input\n");
-  }
   return len;
 }
 
