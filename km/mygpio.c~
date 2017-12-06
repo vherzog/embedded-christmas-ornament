@@ -44,11 +44,10 @@ static int modPWMRegs(int regNUM, int Prescale, int dutyCycle, int periodValue);
 #define LED1 29
 #define LED2 30
 #define LED3 31
-#define BTN0 17			//I2C-6
-#define BTN1 101		//I3C-7
-#define SONAR 101		//I3C-7
+#define BTN0 17
+#define BTN1 101
+#define SONAR 101
 #define GPIO_MAJOR 61
-#define SPEAKER 28		//AC97-2
 #define SONAR_PERIOD 1
 #define TIMER_PERIOD 60000
 
@@ -137,7 +136,6 @@ static int my_init_module(void)
 
 	/* Set buttons as inputs */
 	gpio_direction_input(SONAR);
-	gpio_direction_output(SPEAKER);
 
 	/* Intialize interrupts */
 	irq = IRQ_GPIO(SONAR);
@@ -169,9 +167,6 @@ static int my_init_module(void)
 	irq17 = 0;
 	irq101 = 0;
 	reset = 0;
-
-	/* Initaliaze timers for music delay */
-	//TODO
 
 	/* Initialize timers for incrementing count */
 	ledTimer = (struct timer_list*) kmalloc(sizeof(struct timer_list), GFP_KERNEL);
