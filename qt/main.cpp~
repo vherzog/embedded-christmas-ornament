@@ -12,19 +12,18 @@ int main(int argc, char *argv[])
     QApplication a(argc, argv);
     QImage myImage;
     myImage.load("ornament.png");
-    //QLabel label("<img src=':/home/root/ornament.png' />");
-    //label.show();
+    QLabel label("<img src=':/home/root/ornament.png' />");
+    label.show();
+
     //QPixmap pic("/home/root/ornament.png");
 
-    QLabel* myLabel = new QLabel();
-    myLabel->setPixmap(QPixmap::fromImage(myImage));
+   // QLabel* myLabel = new QLabel();
+    
 
+    //myLabel->setPixmap(QPixmap::fromImage(myImage));
     //myLabel->setPixmap(pic);
+   // myLabel->show();
 
-    myLabel->show();
-
-    return a.exec();
-}
 
 /*    QApplication a(argc, argv);
     QGraphicsScene scene;
@@ -36,6 +35,8 @@ int main(int argc, char *argv[])
     scene.addItem(&item);
     view.show();*/
 
+
+    return a.exec();
     /*QApplication a(argc, argv);
 
     //QImage myImage;
@@ -49,6 +50,7 @@ int main(int argc, char *argv[])
     myLabel->show();
 
     return a.exec();*/
+}
 
 
 

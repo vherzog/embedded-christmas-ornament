@@ -30,6 +30,8 @@
 
 /* Function Headers*/ 
 static void my_cleanup_module(void);
+static void change_note_timer_handler(unsigned long data);
+static void play_note_timer_handler(unsigned long data);
 static void timer_handler(unsigned long data);
 static void sonarTimerHandler(unsigned long data);
 static ssize_t gpio_read(struct file* filp, char* buf, size_t count, loff_t* f_pos);
@@ -44,28 +46,41 @@ static int modPWMRegs(int regNUM, int Prescale, int dutyCycle, int periodValue);
 #define LED1 29
 #define LED2 30
 #define LED3 31
-#define BTN0 17
-#define BTN1 101
-#define SONAR 101
+#define BTN0 17			//I2C-6
+#define BTN1 101		//I3C-7
+#define SONAR 101		//I3C-7
 #define GPIO_MAJOR 61
+#define SPEAKER 28		//AC97-2
 #define SONAR_PERIOD 1
 #define TIMER_PERIOD 60000
+#define DELAY_PERIOD 10		// rest 250ms (music)
 
 /* Note frequency definitions */
 #define c4 261
+#define d4 293
+#define e4 329
+#define f4 349
+#define g4 392
+#define a4 440
+#define b4 493
+#define c5 523
 #define rest 1
 
+// c4 to c5
+
 /* Note length definitions */
-#define half 6000
-#define quarter 3000
-#define eigth 1500
-#define JOY 2
+#define half 1000
+#define quarter 500
+#define eigth 250
+#define JOY 64
 
 /* Global variables */
 static int dir, en, irq17, irq101, reset, bLevel;
 static int count;
 static struct timer_list* ledTimer;
-static struct timer_list* sonarTimer; /* Simultaneous timer */
+static struct timer_list* sonarTimer; 		/* Simultaneous timer */
+static struct timer_list* changeNoteTimer;  	/* Controls note changes, duration of notes, and 250ms delays */
+static struct timer_list* playNoteTimer;  	/* Controls frequency of notes being played */
 char* bufKern;
 static int timer_period;
 static int haltSonar;
@@ -73,9 +88,12 @@ static int sonarCount;
 static int prevSonarRead;
 static unsigned long prevJiffies;
 static int slowCount;
+static int note_state;			
+static int current_note;		
+static int play_note;			// used for 50% duty cycle
 
-static unsigned joy[JOY] = {c4, rest};
-static unsigned joy_length[JOY] = {half, half};
+static unsigned joy[JOY] = {c5, b4, a4, g4, rest, f4, e4, d4, c4, rest, g4, a4, rest, a4, b4, rest, b4, c5, rest, c5, c5, b4, a4, g4, g4, f4, e4, c5, c5, b4, a4, g4, g4, f4, e4, e4, e4, e4, e4, e4, f4, g4, rest, f4, e4, d4, d4, d4, d4, e4, f4, rest, e4, d4, e4, c5, a4, g4, f4, e4, f4, e4, d4, c4}; //64
+static unsigned joy_length[JOY] = {half, quarter, quarter, half, quarter, quarter, half, half, half, quarter, quarter, half, quarter, quarter, half, quarter, quarter, half, quarter, quarter, quarter, quarter, quarter, quarter, quarter, quarter, quarter, quarter, quarter, quarter, quarter, quarter, quarter, quarter, quarter, quarter, quarter, quarter, quarter, eigth, eigth, half, quarter, eigth, eigth, quarter, quarter, quarter, eigth, eigth, half, quarter, eigth, eigth, quarter, half, quarter, quarter, quarter, quarter, quarter, half, half, half};
 
 /* General FOPS */
 struct file_operations gpio_fops = {
@@ -136,6 +154,7 @@ static int my_init_module(void)
 
 	/* Set buttons as inputs */
 	gpio_direction_input(SONAR);
+	gpio_direction_output(SPEAKER, 0);
 
 	/* Intialize interrupts */
 	irq = IRQ_GPIO(SONAR);
@@ -161,12 +180,34 @@ static int my_init_module(void)
 	en = 1;
 	dir = 1;
 	timer_period = 1000;
-	bLevel = 1; /* Brightness Level */
+	bLevel = 1;			 /* Brightness Level */
+	note_state = 0;			/* Start at rest */
+	current_note = 0;		/* Start at beginning of song */
+	play_note = 2;			/* Start at freq 0 */
 
 	/* Used to determine simultaneous button presses */
 	irq17 = 0;
 	irq101 = 0;
 	reset = 0;
+
+	/* Initaliaze timers for music delay */
+	changeNoteTimer = (struct timer_list*) kmalloc(sizeof(struct timer_list), GFP_KERNEL);
+	if(!changeNoteTimer) {
+		printk(KERN_ALERT "Unable to assign timer, exiting\n");
+		my_cleanup_module();
+    		return -ENOMEM;
+	}
+	setup_timer(changeNoteTimer, change_note_timer_handler, 0);
+	mod_timer(changeNoteTimer, jiffies + msecs_to_jiffies(DELAY_PERIOD));
+
+	playNoteTimer = (struct timer_list*) kmalloc(sizeof(struct timer_list), GFP_KERNEL);
+	if(!playNoteTimer) {
+		printk(KERN_ALERT "Unable to assign timer, exiting\n");
+		my_cleanup_module();
+    		return -ENOMEM;
+	}
+	setup_timer(playNoteTimer, play_note_timer_handler, 0);
+	mod_timer(playNoteTimer, jiffies + msecs_to_jiffies((1/joy[current_note]) * 1000));
 
 	/* Initialize timers for incrementing count */
 	ledTimer = (struct timer_list*) kmalloc(sizeof(struct timer_list), GFP_KERNEL);
@@ -241,6 +282,51 @@ static void sonarTimerHandler(unsigned long data) {
   mod_timer(sonarTimer, jiffies + usecs_to_jiffies(SONAR_PERIOD));
 }
 
+/***********************************************************************************
+ * Timer for music control (slower)
+ **********************************************************************************/
+static void change_note_timer_handler(unsigned long data) {
+	// Change to next note!
+	if(note_state) {
+		current_note++;
+		if(current_note == JOY) {
+			current_note = 0;
+			printk(KERN_ALERT "Finished the song!\n");
+		}
+		play_note = 0;
+		note_state = 0;
+		printk(KERN_ALERT "Play note idx %d\n", current_note);
+		mod_timer(changeNoteTimer, jiffies + msecs_to_jiffies(joy_length[current_note]));
+	}
+	// Add 250ms rest
+	else {
+		printk(KERN_ALERT "Change note handler, note_state = 0\n");
+		play_note = 2;
+		note_state = 1;
+		mod_timer(changeNoteTimer, jiffies + msecs_to_jiffies(DELAY_PERIOD));
+	}
+}
+
+/***********************************************************************************
+ * Timer for playing notes (faster)
+ **********************************************************************************/
+static void play_note_timer_handler(unsigned long data) {
+	// 50% duty cycle
+	if(play_note == 1) {
+		//printk(KERN_ALERT "PLAY NOTE\n");
+		play_note = 0;
+		pxa_gpio_set_value(SPEAKER, 0);
+	} else if (play_note == 0) {
+		play_note = 1;
+		 pxa_gpio_set_value(SPEAKER, 1);
+	}
+	// Used for rest time (set back to 1/0 in change_note_timer_handler)
+	else if (play_note == 2) {
+		pxa_gpio_set_value(SPEAKER, 0);
+	}
+	// set timer to current period (MICROSECONDS)
+	mod_timer(playNoteTimer, jiffies + msecs_to_jiffies((1/joy[current_note]) * 1000));
+}
 
 /***********************************************************************************
  * Timer Callback for count
@@ -269,8 +355,6 @@ static void my_cleanup_module(void)
   if(ledTimer) kfree(ledTimer);
   if(bufKern)  kfree(bufKern);
 }
-
-
 
 /***********************************************************************************
  * Takes user input and modifies period 
