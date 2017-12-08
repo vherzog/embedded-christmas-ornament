@@ -11,7 +11,6 @@
 #include <asm/arch/pxa-regs.h>
 #include <asm-arm/arch/hardware.h>
 #include <asm-arm/arch/gpio.h>
-/* #include <stdint.h> */
 
 /* Device drivers from timer labs */
 #include <linux/init.h>
@@ -34,7 +33,6 @@ static void my_cleanup_module(void);
 static void speakerOutputTimerHandler(unsigned long data);
 static void speakerControlTimerHandler(unsigned long data);
 static void sonarReadTimerHandler(unsigned long data);
-static unsigned int us_to_ft(int data);
 
 static ssize_t gpio_read(struct file* filp, char* buf, size_t count, loff_t* f_pos);
 static ssize_t gpio_write( struct file *filp, const char __user *buff, unsigned long len, void *data);
@@ -50,9 +48,11 @@ static ssize_t gpio_write( struct file *filp, const char __user *buff, unsigned 
 #define HIGH 1
 
 /* Timer Interval Defines */
-#define SONAR_READ_PERIOD_NORMAL 10000 /* msecs */
+/* #define SONAR_READ_PERIOD_NORMAL 10000 /\* msecs *\/ */
+#define SONAR_READ_PERIOD_NORMAL 5000 /* msecs */
 #define SONAR_READ_PERIOD_FAST 100   /* msecs */
-#define SONAR_READ_PERIOD_DISPLAY 60000 /* msecs, halts sampling if display is on */
+/* #define SONAR_READ_PERIOD_DISPLAY 60000 /\* msecs, halts sampling if display is on *\/ */
+#define SONAR_READ_PERIOD_DISPLAY 20000 /* msecs, halts sampling if display is on */
 #define SONAR_READ_HALT 10 /* usecs */
 #define TIMER_PERIOD 60000 /* msecs */
 
@@ -60,7 +60,7 @@ static ssize_t gpio_write( struct file *filp, const char __user *buff, unsigned 
 #define FAST_SAMPLE_LIMIT 100	/* How many times to sample in fast trigger period */
 #define DIST_THRESHOLD 2	/* Distance threshold in feet */
 #define US_TO_FEET 1764
-#define TRIGGER_THRESHOLD 10	/* How many times threshold must be triggered to cause display to be active */
+#define TRIGGER_THRESHOLD 9	/* How many times threshold must be triggered to cause display to be active, one less than acutal value because initial trigger must be included. */
 
 /* Timer variables */
 static struct timer_list* sonarReadTimer;
@@ -69,14 +69,15 @@ static struct timer_list* speakerControlTimer;
 
 /* Speaker Variables */
 static int speakerEn = 0;
-static int count = 0;
 
 /* Sonar Variables */
+static int sonarState = 1;
+static int prevSonarState = 0;
 static struct timeval* prevTime;
 static int sampleFast = 0;	 /* State variable that causes faster sampling rate */
 static int fastSampleCount = 0;	 /* How many samples have occured during fast sample rate */
 static int fastTriggerCount = 0; /* How many times a person has been detected during the increased sampling rate */
-static int displayState = 0;
+static int displayEn = 0;
 static int throttle = 0;
 
 /* Global Variables */
@@ -101,40 +102,20 @@ irqreturn_t gpio_irq101_rising(int irq, void *dev_id, struct pt_regs *regs)
     struct timeval curTime;
     do_gettimeofday(&curTime);
     int usDist = timeval_compare(&curTime, prevTime); // Distance in microseconds
-    /* int ftDist = us_to_ft(usDist); */
     int ftDist = usDist / US_TO_FEET;
     if (ftDist < DIST_THRESHOLD && !sampleFast) 
       sampleFast = 1;
     else if (ftDist < DIST_THRESHOLD && sampleFast) {
-      if (fastTriggerCount++ > TRIGGER_THRESHOLD) {
-	displayState = 1;
-	speakerEn = 1;
-      }
+      fastTriggerCount++;
     }
-    printk(KERN_ALERT "\n\nusDist: %d \t ftDist: %d \t sampleFast: %d \t fastTriggerCount: %d \t displayState: %d \t speakerEn: %d \r", usDist, ftDist, sampleFast, fastTriggerCount, displayState, speakerEn);
+    printk(KERN_ALERT "\n\nusDist: %d \t ftDist: %d \t sampleFast: %d \t fastTriggerCount: %d \t displayEn: %d \t speakerEn: %d \r", usDist, ftDist, sampleFast, fastTriggerCount, displayEn, speakerEn);
   }
 
   return IRQ_HANDLED;
 }
 
-/*****************************************************************
- * Convert us to feet for PWM
- * 2 LSB equal fractional value
- * Rest of bits correspond to feet
- *****************************************************************/
-unsigned int us_to_ft(int us) {
-  /* unsigned int ft = us / US_TO_FEET; // Find feet */
-  /* unsigned int in = us % US_TO_FEET;  // Find inches */
-  
-  /* Translate fractional componenet to fixed-point */
-  /* unsigned int tenths = in / 10; */
-  /* unsigned int hund = in % 10; */
-  /* hund /= 10; */
-  return 0;
-}
 
 /* Instantiate all timers needed for program */
-
 static int startTimers(void) {
 	/* Timer controlling pulse width of output signal */
 	speakerOutputTimer = (struct timer_list*) kmalloc(sizeof(struct timer_list), GFP_KERNEL);
@@ -208,9 +189,6 @@ static int my_init_module(void)
 	  return -ENOMEM;
 	}
 
-	/* Initialize Global Variables */
-	speakerEn = 0;
-
 	/* Declare timespec struct */
 	prevTime = (struct timeval*) kmalloc(sizeof(struct timeval), GFP_KERNEL);
 	if (!prevTime) {
@@ -232,53 +210,111 @@ static int my_init_module(void)
 
 /***********************************************************************************
  * Timer for triggering sonar ouput
+ * Change to case statment with more explicitly designed states
+ * Case 0: Sampling pin is high
+ * Case 1: Sampling at normal rate, no displays enabled, sample pin is low
+ * Case 2: Sampling at faster rate, no displays enable, sample pin is low
+ * Case 3: Sampling at throttled rate, displays enable, sample pin is low
  **********************************************************************************/
 static void sonarReadTimerHandler (unsigned long data) {
 
-  /* Motion detected read rate control */
-  if (speakerEn && displayState) {
-    pxa_gpio_set_value(SONAR_READ, LOW);
+ switch (sonarState) {
+ case 0:
+   pxa_gpio_set_value(SONAR_READ, HIGH);
 
-    /* Decrease sample rate if motion is detected */
-    if (displayState && speakerEn && !throttle) {
-      throttle = 1;
-      sampleFast = 0;
-      fastSampleCount = 0;
-      mod_timer(sonarReadTimer, jiffies + msecs_to_jiffies(SONAR_READ_PERIOD_DISPLAY));
-    }
+   /* Return to normal sampling if not triggered */
+   if (prevSonarState == 1) {
+     if (sampleFast) 
+       sonarState = 2;
+     else 
+       sonarState = 1;
+   }
 
-    /* Return sample rate to normal after throttle period */
-    else if (displayState && speakerEn && throttle) {
-      displayState = 0;
-      speakerEn = 0;
-      throttle = 0;
-      fastTriggerCount = 0;
-      mod_timer(sonarReadTimer, jiffies + msecs_to_jiffies(SONAR_READ_PERIOD_NORMAL));
-    }
-  }
+   /* Check if fast sampling limit has been exceeded */
+   else if (prevSonarState == 2) {
+     if (fastSampleCount < FAST_SAMPLE_LIMIT) {
+       if (fastTriggerCount > TRIGGER_THRESHOLD) {
+	 sonarState = 3;
+	 fastTriggerCount = 0;
+	 speakerEn = 1;
+	 displayEn = 1;
+       }
+       else 
+	 sonarState = 2;
+     }
+     else {
+       sonarState = 1;
+       sampleFast = 0;
+     }
+   }
 
-  /* Motion not detected read rate control */
-  else if (pxa_gpio_get_value(SONAR_READ)) {
-    pxa_gpio_set_value(SONAR_READ, LOW);
+   /* Recheck sensor to see if displays need to be left on */
+   else if (prevSonarState == 3) {
+     sonarState = 2;
+   }
 
-    /* Change sampling rate if motion is detected */
-    if (sampleFast && fastSampleCount++ < FAST_SAMPLE_LIMIT) 
-      mod_timer(sonarReadTimer, jiffies + msecs_to_jiffies(SONAR_READ_PERIOD_FAST));
+   prevSonarState = 0;
+   mod_timer(sonarReadTimer, jiffies + usecs_to_jiffies(SONAR_READ_HALT));
+   break;
 
-    /* Return sample rate to normal if motion detection threshold is not exceeded */
-    else {
-      mod_timer(sonarReadTimer, jiffies + msecs_to_jiffies(SONAR_READ_PERIOD_NORMAL));
-      fastSampleCount = 0;
-      sampleFast = 0;
-      fastTriggerCount = 0;
-    }
-  }
+ case 1:
+   pxa_gpio_set_value(SONAR_READ, LOW);
 
-  
-  else {
-    pxa_gpio_set_value(SONAR_READ, HIGH);
-    mod_timer(sonarReadTimer, jiffies + usecs_to_jiffies(SONAR_READ_HALT));
-  }
+   /* Reset variable associated with faster sampling */
+   fastSampleCount = 0;
+   fastTriggerCount = 0;
+
+   /* Reset Display Variables */
+   speakerEn = 0;
+   displayEn = 0;
+
+   /* Assign State Values */
+   prevSonarState = 1;
+   sonarState = 0;
+   mod_timer(sonarReadTimer, jiffies + msecs_to_jiffies(SONAR_READ_PERIOD_NORMAL));
+   break;
+
+ case 2:
+   pxa_gpio_set_value(SONAR_READ, LOW);
+
+   /* Increment sampling count */
+   fastSampleCount++;
+   
+   /* Save current state*/
+   sonarState = 0;
+   prevSonarState = 2;
+
+   mod_timer(sonarReadTimer, jiffies + msecs_to_jiffies(SONAR_READ_PERIOD_FAST));
+   break;
+
+ case 3:
+   pxa_gpio_set_value(SONAR_READ, LOW);
+   
+   /* Enable outputs */
+   speakerEn = 1;
+   displayEn = 1;
+   
+   /* Reset values used to determine trigger */
+   fastSampleCount = 0;
+   fastTriggerCount = 0;
+
+   /* Set State variables */
+   sonarState = 0;
+   prevSonarState = 3;
+   mod_timer(sonarReadTimer, jiffies + msecs_to_jiffies(SONAR_READ_PERIOD_DISPLAY));
+   break;
+
+ default: 
+   pxa_gpio_set_value(SONAR_READ, LOW);
+   fastSampleCount = 0;
+   fastTriggerCount = 0;
+   sampleFast = 0;
+   prevSonarState = 1;
+   sonarState = 0;
+   mod_timer(sonarReadTimer, jiffies + msecs_to_jiffies(SONAR_READ_PERIOD_NORMAL));
+   break;
+ }
+
 }
 
 static void speakerOutputTimerHandler (unsigned long data) {
@@ -320,44 +356,12 @@ static ssize_t gpio_read(struct file* filp, char* buf, size_t _count, loff_t* f_
   int len = 0;
   memset(bufKern, 0, 256);
 
-  /* int unit = timer_period/1000; */
-  /* int deci = timer_period - (unit * 1000); */
-  
-  if (*f_pos > 0) 
+  if (*f_pos > 0)
     return 0;
 
-  /* /\* Print Data To Buffer *\/ */
-  /* len += sprintf((bufKern+len), "CounterValue: %d\n", count); */
-  /* len += sprintf((bufKern+len), "CounterPeriod: %d.%d secs\n", unit, deci); */
-  /* switch (bLevel) { */
-  /* case 1:  */
-  /*   len += sprintf((bufKern+len), "Brightness Level: 50%% duty cycle\n"); */
-  /*   break; */
-
-  /* case 2:  */
-  /*   len += sprintf((bufKern+len), "Brightness Level: 25%% duty cycle\n"); */
-  /*   break; */
-
-  /* case 3: */
-  /*   len += sprintf((bufKern+len), "Brightness Level: 10%% duty cycle\n"); */
-  /*   break; */
-  /* } */
-
-  /* if (dir) */
-  /*   len += sprintf((bufKern+len), "Dir: %s\n", "UP"); */
-  /* else */
-  /*   len += sprintf((bufKern+len), "Dir: %s\n", "DOWN"); */
-
-  /* if (!en)  */
-  /*   len += sprintf((bufKern+len), "State: %s\n", "RUNNING"); */
-  /* else  */
-  /*   len += sprintf((bufKern+len), "State: %s\n", "STOPPED"); */
-
-  /* if (copy_to_user(buf, bufKern, len)) return -EFAULT; */
-
-  /* printk(KERN_ALERT "Test\n"); */
-  
+  len += sprintf(bufKern, "%d %d", displayEn, speakerEn);
   *f_pos += len;
+  
   return len;
 }
 
