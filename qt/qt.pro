@@ -9,4 +9,5 @@ INCLUDEPATH += /ad/eng/users/v/h/vherzog/Desktop/embedded-christmas-ornament/qt/
                .
 
 # Input
-SOURCES += main.cpp
+HEADERS += Gui.h Timer.h
+SOURCES += Gui.cpp Timer.cpp main.cpp

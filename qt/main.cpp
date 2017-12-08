@@ -1,28 +1,22 @@
 #include <QtGui/QApplication>
 #include <QLabel>
 #include <stdio.h>
-//#include <QPicture>
+#include <Gui.h>
+#include <Timer.h>
 
 int main(int argc, char *argv[])
 {
-    printf("open!\n");
-    QApplication a(argc, argv);
-    QLabel label("<img src=':/home/root/ornament.png' />");
-    label.show();
-    return a.exec();
-    /*QApplication a(argc, argv);
+	/* Create and run GUI application */
+	QApplication app(argc, argv);
+	Gui* window = new Gui();
 
-    //QImage myImage;
-    QPicture* myImage = new QPicture();
-    myImage->load("ornament.png");
-
-    QLabel* myLabel = new QLabel();
-    //myLabel.setPixmap(QPixmap::fromImage(myImage));
-    myLabel->setPicture(*myImage);
-
-    myLabel->show();
-
-    return a.exec();*/
+	Timer* t = new Timer(1, window);
+  	t->setupTimer();
+	
+	//window.showFullScreen();
+	//window.show();
+	
+	return app.exec();
 }
 
 
