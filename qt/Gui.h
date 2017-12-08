@@ -16,6 +16,10 @@
 
 #include <QImage>
 
+#define IMG_TOTAL 3
+
+extern int image_idx;
+
 /* Gui class - used to display images to LCD screen connected to Gumstix board */
 class Gui;
 
@@ -27,23 +31,25 @@ public:
 
 /* Button handler declations (if needed) */
 private slots:
-	void image_handler();
+	//void image_handler();
 
 private:
 	/* Declare image widget that will be displayed */
 	QImage image;
-	QListWidget* imgs;
-	QStringList* imgList;
-	QGridLayout* layout;
-	QLabel* myLabel;
+	//QListWidget* imgs;
+	//QStringList* imgList;
+	//QGridLayout* layout;
+	QLabel* myLabel1;
+	QLabel* myLabel2;
+	QLabel* myLabel3;
 	//QPixmap image;
 	//TODO TIMER
 	
 	/* Declare variables used for state information */
-	int img_idx;
+	//int img_idx;
 	int img_total;
-	QString dirName;
-	QDir dir;
+	//QString dirName;
+	//QDir dir;
 };
 
 
