@@ -1,3 +1,4 @@
+//#include <QGuiApplication>
 #include <QtGui/QApplication>
 #include <QLabel>
 #include <stdio.h>
@@ -8,10 +9,15 @@ int main(int argc, char *argv[])
 {
 	/* Create and run GUI application */
 	QApplication app(argc, argv);
+	QApplication::setOverrideCursor(Qt::BlankCursor);
 	Gui* window = new Gui();
 
-	Timer* t = new Timer(1, window);
-  	t->setupTimer();
+	Timer* t0 = new Timer(0, window);
+	Timer* t1 = new Timer(1, window);
+	Timer* t2 = new Timer(2, window);
+	t0->setupTimer();
+  	t1->setupTimer();
+	t2->setupTimer();
 	
 	//window.showFullScreen();
 	//window.show();

@@ -1,7 +1,7 @@
 /****************************************************************************
 ** Meta object code from reading C++ file 'Timer.h'
 **
-** Created: Fri Dec 8 15:09:23 2017
+** Created: Fri Dec 8 17:12:20 2017
 **      by: The Qt Meta Object Compiler version 61 (Qt 4.5.1)
 **
 ** WARNING! All changes made in this file will be lost!

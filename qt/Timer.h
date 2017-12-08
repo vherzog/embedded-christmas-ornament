@@ -5,8 +5,12 @@
 #include <QTimer>
 #include <stdio.h>
 #include <stdlib.h>
-#include <iostream>
+#include <string.h>
+#include <signal.h>
+#include <fcntl.h>
+#include <unistd.h>
 #include <Gui.h>
+#include <iostream>
 
 using namespace std;
 
@@ -20,10 +24,7 @@ class Timer : public QObject {
 public:
 	Timer(int st, Gui* gui);
 	void setupTimer();
-	int state;		/* 0: display, 1: image */
-	//int count;
-	//char* buf;
-	//int pFile;
+	int state;		/* 0: display, 1: image, 2:  */
 	QTimer* timer;
 	Gui* myGui;
 

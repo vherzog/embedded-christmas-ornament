@@ -24,30 +24,17 @@ class Gui;
 class Gui : public QWidget {
 	Q_OBJECT
 public:
+	int on;
+	int prev_on;
 	Gui(QWidget *parent = 0);
 	QLabel* myLabel1;
 	QLabel* myLabel2;
 	QLabel* myLabel3;
-	//Gui();
-
-/* Button handler declations (if needed) */
-private slots:
-	//void image_handler();
+	QLabel* myLabel4;
 
 private:
 	/* Declare image widget that will be displayed */
 	QImage image;
-	//QListWidget* imgs;
-	//QStringList* imgList;
-	//QGridLayout* layout;
-	//QPixmap image;
-	//TODO TIMER
-	
-	/* Declare variables used for state information */
-	//int img_idx;
-	int img_total;
-	//QString dirName;
-	//QDir dir;
 };
 
 
