@@ -34,6 +34,10 @@ d/pictures/";
 	myLabel2 = new QLabel("<img src='xmastree.png' />");
 	myLabel3 = new QLabel("<img src='wreath.png' />");
  	
+	myLabel1->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+	myLabel2->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+	myLabel3->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
+
 	myLabel2->hide();
 	myLabel3->hide();
     	myLabel1->showFullScreen();
