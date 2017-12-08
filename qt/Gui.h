@@ -13,12 +13,10 @@
 #include <QString>
 #include <QStringList>
 #include <string>
-
 #include <QImage>
 
 #define IMG_TOTAL 3
 
-extern int image_idx;
 
 /* Gui class - used to display images to LCD screen connected to Gumstix board */
 class Gui;
@@ -27,6 +25,9 @@ class Gui : public QWidget {
 	Q_OBJECT
 public:
 	Gui(QWidget *parent = 0);
+	QLabel* myLabel1;
+	QLabel* myLabel2;
+	QLabel* myLabel3;
 	//Gui();
 
 /* Button handler declations (if needed) */
@@ -39,9 +40,6 @@ private:
 	//QListWidget* imgs;
 	//QStringList* imgList;
 	//QGridLayout* layout;
-	QLabel* myLabel1;
-	QLabel* myLabel2;
-	QLabel* myLabel3;
 	//QPixmap image;
 	//TODO TIMER
 	

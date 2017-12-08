@@ -1,6 +1,6 @@
 #include <Gui.h>
 
-int image_idx = 0;
+extern int img_idx = 0;
 
 /* Gui Constructor */
 Gui::Gui(QWidget* parent) : QWidget(parent) {
@@ -8,7 +8,8 @@ Gui::Gui(QWidget* parent) : QWidget(parent) {
 	/*imgs = new QListWidget(this);
 	img_idx = 0;
 
-	dirName = "/media/card/pictures/";
+	dirName = "/media/car
+d/pictures/";
 	dir.setPath(dirName);
 	dir.setFilter(QDir::Files | QDir::NoDotAndDotDot);
 	
@@ -32,10 +33,10 @@ Gui::Gui(QWidget* parent) : QWidget(parent) {
 	myLabel1 = new QLabel("<img src='ornament.png' />");
 	myLabel2 = new QLabel("<img src='xmastree.png' />");
 	myLabel3 = new QLabel("<img src='wreath.png' />");
- 
-    	myLabel1->show(); 
+ 	
 	myLabel2->hide();
 	myLabel3->hide();
+    	myLabel1->showFullScreen();
  
 
 
