@@ -11,6 +11,10 @@ int main(int argc, char *argv[])
 	QApplication app(argc, argv);
 	QApplication::setOverrideCursor(Qt::BlankCursor);
 	Gui* window = new Gui();
+	//system("passkey-agent 0000 10:B7:F6:06:F9:82 &");
+	//system("aplay -D d80&");
+	cout << "STARTING FIRST SONG" << endl;
+	system("/home/root/play_music.sh -s JoyToTheWorld.mp3");
 
 	Timer* t0 = new Timer(0, window);
 	Timer* t1 = new Timer(1, window);

@@ -1,0 +1,1 @@
+cmd_/ad/eng/users/v/h/vherzog/Desktop/embedded-christmas-ornament/km/mygpio.ko := arm-linux-ld -EL  -r -o /ad/eng/users/v/h/vherzog/Desktop/embedded-christmas-ornament/km/mygpio.ko /ad/eng/users/v/h/vherzog/Desktop/embedded-christmas-ornament/km/mygpio.o /ad/eng/users/v/h/vherzog/Desktop/embedded-christmas-ornament/km/mygpio.mod.o

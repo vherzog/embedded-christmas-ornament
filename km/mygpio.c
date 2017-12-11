@@ -38,8 +38,8 @@ static ssize_t gpio_read(struct file* filp, char* buf, size_t count, loff_t* f_p
 static ssize_t gpio_write( struct file *filp, const char __user *buff, unsigned long len, void *data);
 
 /* GPIO definitions */
-#define SONAR 101
-#define SONAR_READ 17
+#define SONAR 101		// I2C-7
+#define SONAR_READ 17		// I2C-6
 #define GPIO_MAJOR 61
 #define SPEAKER_OUT 113
 
@@ -108,7 +108,7 @@ irqreturn_t gpio_irq101_rising(int irq, void *dev_id, struct pt_regs *regs)
     else if (ftDist < DIST_THRESHOLD && sampleFast) {
       fastTriggerCount++;
     }
-    printk(KERN_ALERT "\n\nusDist: %d \t ftDist: %d \t sampleFast: %d \t fastTriggerCount: %d \t displayEn: %d \t speakerEn: %d \r", usDist, ftDist, sampleFast, fastTriggerCount, displayEn, speakerEn);
+    //printk(KERN_ALERT "\n\nusDist: %d \t ftDist: %d \t sampleFast: %d \t fastTriggerCount: %d \t displayEn: %d \t speakerEn: %d \r", usDist, ftDist, sampleFast, fastTriggerCount, displayEn, speakerEn);
   }
 
   return IRQ_HANDLED;
@@ -245,6 +245,8 @@ static void sonarReadTimerHandler (unsigned long data) {
      else {
        sonarState = 1;
        sampleFast = 0;
+       displayEn = 0;
+       speakerEn = 0;
      }
    }
 
@@ -352,18 +354,31 @@ static ssize_t gpio_write( struct file *filp, const char __user *buff, unsigned 
 /***********************************************************************************
  * Prints relavent program data
  **********************************************************************************/
+static int readEn = 0;
 static ssize_t gpio_read(struct file* filp, char* buf, size_t _count, loff_t* f_pos) {
   int len = 0;
   memset(bufKern, 0, 256);
 
-  if (*f_pos > 0)
-    return 0;
+ // if (*f_pos > 0)
+  //  return 0;
 
-  len += sprintf(bufKern, "%d %d", displayEn, speakerEn);
-  *f_pos += len;
+  if(readEn) {
+  	readEn = 0;
+	return 0;
+  } else {
+	//printk(KERN_ALERT "WERE IN HERE WITH VALUES %d %d\n", displayEn, speakerEn);
+	readEn = 1;
+  	len += sprintf(bufKern, "%d %d", displayEn, speakerEn);
+	if(copy_to_user(buf, bufKern, len)) {
+		return -EFAULT;
+	}
+  	*f_pos += len;
+  }
   
   return len;
 }
 
 module_init(my_init_module);
 module_exit(my_cleanup_module);
+
+//10:B7:F6:06:F9:82 
