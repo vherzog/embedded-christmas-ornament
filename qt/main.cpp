@@ -1,4 +1,3 @@
-//#include <QGuiApplication>
 #include <QtGui/QApplication>
 #include <QLabel>
 #include <stdio.h>
@@ -11,20 +10,18 @@ int main(int argc, char *argv[])
 	QApplication app(argc, argv);
 	QApplication::setOverrideCursor(Qt::BlankCursor);
 	Gui* window = new Gui();
-	//system("passkey-agent 0000 10:B7:F6:06:F9:82 &");
-	//system("aplay -D d80&");
-	cout << "STARTING FIRST SONG" << endl;
+
+	/* Start to play song */
+	//cout << "STARTING FIRST SONG" << endl;
 	system("/home/root/play_music.sh -s JoyToTheWorld.mp3");
 
-	Timer* t0 = new Timer(0, window);
-	Timer* t1 = new Timer(1, window);
-	Timer* t2 = new Timer(2, window);
+	/* Set control timers */
+	Timer* t0 = new Timer(0, window);	// Turns off screen after 10 minutes
+	Timer* t1 = new Timer(1, window);	// Cycles through images every 2 seconds
+	Timer* t2 = new Timer(2, window);	// Polls device driver dynamically
 	t0->setupTimer();
   	t1->setupTimer();
 	t2->setupTimer();
-	
-	//window.showFullScreen();
-	//window.show();
 	
 	return app.exec();
 }

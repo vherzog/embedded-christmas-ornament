@@ -25,7 +25,6 @@ class Gui : public QWidget {
 	Q_OBJECT
 public:
 	int on;
-	int prev_on;
 	Gui(QWidget *parent = 0);
 	QLabel* myLabel1;
 	QLabel* myLabel2;

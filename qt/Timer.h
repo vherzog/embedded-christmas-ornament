@@ -14,8 +14,10 @@
 
 using namespace std;
 
-#define DISPLAY_PERIOD 	180000		/* 180000ms = 3 minutes */
-#define IMAGE_PERIOD 	30000		/* 30000ms = 30 seconds */
+#define DISPLAY_PERIOD 	600000		/* 600000ms = 10 minutes */
+#define IMAGE_PERIOD 	2000		/* 2000ms = 2 seconds */
+#define FAST_PERIOD 	200			
+#define SLOW_PERIOD		20000
 
 
 /* Timer class used to switch between images, and turn display off after period of time */
