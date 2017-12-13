@@ -10,13 +10,16 @@ Embedded Christmas Ornament: final project for BU EC535: Embedded Systems class<
 * By using the -force-depends command the all necessary packages should be able to be installed without any regard to order of installation. This is hacky, however it worked for us.
 * Determine the MAC address of your speaker
 * In the /etc/asound.conf file create a struct like the one below
-pcm.speaker{
-    type bluetooth;
-    device “MAC Address”;
-};
+
+
+>pcm.speaker{
+>    type bluetooth;
+>   device “MAC Address”;
+>};
+
 
 ### Bluetooth Connection Instructions
-Find the MAC address of Bluetooth speaker and replace with the <MAC Address> in /startup/startup_script.sh<br />
+Find the MAC address of Bluetooth speaker and replace with the <MAC Address> in /startup/startup_script.sh<br/>
 
 ### Make 
 cd qt/<br />
