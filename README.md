@@ -10,7 +10,7 @@ Find the MAC address of Bluetooth speaker and replace with the <MAC Address> in 
 ### Make 
 cd qt/<br />
 qmake<br />
-Edit the Makefile to change the INC Path to the following:<br />
+Edit the Makefile to change the INC Path to the following:<br /><br />
     INCPATH = -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++ \<br />
               -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/arm-angstrom-linux-gnueabi \<br />
               -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/backward \<br />
@@ -21,18 +21,18 @@ Edit the Makefile to change the INC Path to the following:<br />
               -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include/QtGui \<br />
               -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include/QtNetwork \<br />
               -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include \<br />
-              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/mkspecs/qws/linux-arm-g++ -I. -I. -I. -I.<br />
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/mkspecs/qws/linux-arm-g++ -I. -I. -I. -I.<br /><br />
 make<br />
 cd ../km/<br />
 make<br />
 
 ### Install and run executables
-Move the following executables to the home Gumstix directory:<br />
+Move the following executables to the home Gumstix directory:<br /><br />
   km/mygpio.ko<br />
   qt/qt<br />
   mp3/play_music.sh<br />
   scripts/startup_script.sh<br />
   qt/ornament.png<br />
   qt/wreath.png<br />
-  qt/xmas-tree.png<br />
+  qt/xmas-tree.png<br /><br />
 Move the mp3 file to the SD Card (/media/card/mp3/jingle-bells.mp3)<br />
