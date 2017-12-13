@@ -29,7 +29,7 @@ Edit the Makefile to change the INC Path to the following:<br /><br />
               -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/debug \
               -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/ext \
               -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include/QtCore \
-              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include/QtGui \<br />
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include/QtGui \
               -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include/QtNetwork \
               -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include \
               -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/mkspecs/qws/linux-arm-g++ -I. -I. -I. -I.<br />
