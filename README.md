@@ -20,11 +20,7 @@ Contributors: John Abernathy & Veronica Herzog
 
 
 ### Bluetooth Connection Instructions
-<<<<<<< HEAD
 Find the MAC address of Bluetooth speaker and replace with the <MAC Address> in /startup/startup_script.sh<br/>
-=======
-Find the MAC address of Bluetooth speaker and replace with the one currently in /startup/startup_script.sh<br />
->>>>>>> 69526cf6c1abfe4f0a5b1e519a6e41e77a732b5d
 
 ### Make 
 cd qt/<br />
