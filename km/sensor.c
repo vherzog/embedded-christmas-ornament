@@ -160,7 +160,7 @@ static int my_init_module(void)
     int result;
     int irq;
     /* Registering device */
-	result = register_chrdev(GPIO_MAJOR, "mygpio", &gpio_fops);
+	result = register_chrdev(GPIO_MAJOR, "sensor", &gpio_fops);
 	if (result < 0)
 	  {
 	    printk(KERN_ALERT
@@ -204,7 +204,7 @@ static int my_init_module(void)
         return -ENOMEM;
 	}
 
-	printk("mygpio: Inserting mygpio module\n");
+	printk("sensor: Inserting sensor module\n");
 	return 0;
 }
 
@@ -335,7 +335,7 @@ static void speakerControlTimerHandler (unsigned long data) {
 
 static void my_cleanup_module(void)
 {
-  unregister_chrdev(GPIO_MAJOR, "mygpio");
+  unregister_chrdev(GPIO_MAJOR, "sensor");
   free_irq(IRQ_GPIO(SONAR), NULL);
 
   if(bufKern)  kfree(bufKern);
