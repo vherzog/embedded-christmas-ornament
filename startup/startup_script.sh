@@ -22,7 +22,7 @@ export QWS_MOUSE_PROTO='tslib:/dev/input/touchscreen0'
 passkey-agent 0000 <MAC Address> &
 aplay -D d80&
 
-mknod /dev/mygpio c 61 0
-insmod mygpio.ko
+mknod /dev/sensor c 61 0
+insmod sensor.ko
 
 ./qt -qws -nomouse &
