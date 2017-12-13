@@ -9,7 +9,7 @@ Contributors: John Abernathy & Veronica Herzog
 * Use the command ipkg -d <DESTINATION> <filename>.ipk -force-depends    
     * Note that DESTINATION is a variable defined in the ipkg.conf file in the etc directory
 * By using the -force-depends command the all necessary packages should be able to be installed without any regard to order of installation. This is hacky, however it worked for us.
-* Determine the MAC address of your speaker
+* Determine the MAC address of your speaker using "hcitool scan"
 * In the /etc/asound.conf file create a struct like the one below
 
 
