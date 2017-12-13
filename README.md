@@ -28,7 +28,7 @@ make<br />
 
 ### Install and run executables
 Move the following executables to the home Gumstix directory:<br /><br />
-  km/mygpio.ko<br />
+  km/sensor.ko<br />
   qt/qt<br />
   mp3/play_music.sh<br />
   scripts/startup_script.sh<br />
