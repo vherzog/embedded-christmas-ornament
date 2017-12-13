@@ -1,6 +1,7 @@
 EC535 Final Project embedded-christmas-ornament
 --------------
 Embedded Christmas Ornament: final project for BU EC535: Embedded Systems class<br />
+Contributors: John Abernathy & Veronica Herzog
 
 ## Installation Instructions
 ### Bluetooth Configuration Instructions 
