@@ -74,7 +74,7 @@ void Timer::timer_handler() {
 		char* buffer = (char*) malloc(256);
 		memset(buffer, 0, 256);
 		int file;
-  		file = open("/dev/mygpio", O_RDWR);
+  		file = open("/dev/sensor", O_RDWR);
 		read(file, (void*) buffer, 256);
 		int displayEn, speakerEn;
 		//displayEn = 0;
