@@ -1,6 +1,7 @@
 EC535 Final Project embedded-christmas-ornament
 --------------
 Embedded Christmas Ornament: final project for BU EC535: Embedded Systems class<br />
+Contributors: John Abernathy & Veronica Herzog
 
 ## Installation Instructions
 ### Bluetooth Configuration Instructions 
@@ -19,29 +20,33 @@ Embedded Christmas Ornament: final project for BU EC535: Embedded Systems class<
 
 
 ### Bluetooth Connection Instructions
+<<<<<<< HEAD
 Find the MAC address of Bluetooth speaker and replace with the <MAC Address> in /startup/startup_script.sh<br/>
+=======
+Find the MAC address of Bluetooth speaker and replace with the one currently in /startup/startup_script.sh<br />
+>>>>>>> 69526cf6c1abfe4f0a5b1e519a6e41e77a732b5d
 
 ### Make 
 cd qt/<br />
 qmake<br />
 Edit the Makefile to change the INC Path to the following:<br /><br />
-    INCPATH = -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++ \<br />
-              -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/arm-angstrom-linux-gnueabi \<br />
-              -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/backward \<br />
-              -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/bits \<br />
-              -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/debug \<br />
-              -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/ext \<br />
-              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include/QtCore \<br />
-              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include/QtGui \<br />
-              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include/QtNetwork \<br />
-              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include \<br />
-              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/mkspecs/qws/linux-arm-g++ -I. -I. -I. -I.<br /><br />
+    INCPATH = -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++ \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/arm-angstrom-linux-gnueabi \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/backward \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/bits \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/debug \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/cross/arm-angstrom-linux-gnueabi/include/c++/ext \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include/QtCore \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include/QtGui \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include/QtNetwork \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/include \
+              -I/ad/eng/courses/ec/ec535/gumstix/oe/qt/mkspecs/qws/linux-arm-g++ -I. -I. -I. -I.<br />
 make<br />
 cd ../km/<br />
 make<br />
 
 ### Install and run executables
-Move the following executables to the home Gumstix directory. Note that if all files below are in the correct directories the system will run without any additional user input.
+Move the following executables to the home Gumstix directory (/home/root). Note that if all files below are in the correct directories the system will run without any additional user input.
 * km/sensor.ko
 * qt/qt
 * mp3/play_music.sh
